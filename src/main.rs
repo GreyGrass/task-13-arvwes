@@ -6,7 +6,28 @@ use crate::vector3::Vec3;
 use std::fs::File;
 use std::io::Write;
 
+fn hit_sphere(center: &Vec3, radius: f64, ray: &Ray) -> f64{
+    let off_center = ray.origin() - *center;
+    //dot((A​ + t*B ​- C)​ ,(A​ + t*B​ - C​)) = R*R
+    let a = ray.direction().dot(&ray.direction());
+    let b = 2.0*ray.direction().dot(&off_center);
+    let c = off_center.dot(&off_center) - radius*radius;
+    let discriminant = b*b - 4.0*a*c;
+    if discriminant < 0.0 {
+        -1.0
+    }else{
+        (-b - discriminant.sqrt()) /(2.0*a)
+    }
+
+}
+
 fn color(ray: Ray) -> Vec3 {
+    let t = hit_sphere(&Vec3{x: 0.0, y: 0.0,z: -1.0}, 0.5, &ray);
+    if t > 0.0{
+        let N = (ray.point_at_parameter(t) - Vec3{x:0.0, y:0.0, z:-1.0}).unit_vector();
+        
+        return Vec3{x: N.x + 1.0, y:N.y + 1.0, z: N.z + 1.0}*0.5;
+    }
     let u_direction = ray.direction().unit_vector();
     let t: f64 = 0.5 * (u_direction.y + 1.0);
     let start_value = Vec3 {

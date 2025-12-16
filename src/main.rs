@@ -1,32 +1,27 @@
 mod ray;
+mod scene;
+mod shapes;
 mod vector3;
 use crate::ray::Ray;
+use crate::scene::{Camera, World};
+use crate::shapes::Sphere;
 use crate::vector3::Vec3;
+use rand::{self, Rng};
 
+use std::f64::INFINITY;
 use std::fs::File;
 use std::io::Write;
 
-fn hit_sphere(center: &Vec3, radius: f64, ray: &Ray) -> f64{
-    let off_center = ray.origin() - *center;
-    //dot((A​ + t*B ​- C)​ ,(A​ + t*B​ - C​)) = R*R
-    let a = ray.direction().dot(&ray.direction());
-    let b = 2.0*ray.direction().dot(&off_center);
-    let c = off_center.dot(&off_center) - radius*radius;
-    let discriminant = b*b - 4.0*a*c;
-    if discriminant < 0.0 {
-        -1.0
-    }else{
-        (-b - discriminant.sqrt()) /(2.0*a)
-    }
 
-}
-
-fn color(ray: Ray) -> Vec3 {
-    let t = hit_sphere(&Vec3{x: 0.0, y: 0.0,z: -1.0}, 0.5, &ray);
-    if t > 0.0{
-        let N = (ray.point_at_parameter(t) - Vec3{x:0.0, y:0.0, z:-1.0}).unit_vector();
-        
-        return Vec3{x: N.x + 1.0, y:N.y + 1.0, z: N.z + 1.0}*0.5;
+fn color(ray: Ray, hitables: &World) -> Vec3 {
+    let rec = hitables.hit_anything(0.0, INFINITY, &ray);
+    if rec.is_some() {
+        let rec = rec.unwrap();
+        return Vec3 {
+            x: rec.normal.x + 1.0,
+            y: rec.normal.y + 1.0,
+            z: rec.normal.z + 1.0,
+        } * 0.5;
     }
     let u_direction = ray.direction().unit_vector();
     let t: f64 = 0.5 * (u_direction.y + 1.0);
@@ -48,42 +43,55 @@ fn main() -> std::io::Result<()> {
 
     let nx = 200;
     let ny = 100;
+    let ns = 100;
+    let nxf = nx as f64;
+    let nyf = ny as f64;
+    let nsf = ns as f64;
     writeln!(&mut file, "P3\n{} {}\n255", nx, ny)?;
-    let lower_left_corner = Vec3 {
-        x: -2.0,
-        y: -1.0,
-        z: -1.0,
-    };
-    let vertical = Vec3 {
-        x: 0.0,
-        y: 2.0,
-        z: 0.0,
-    };
-    let horizontal = Vec3 {
-        x: 4.0,
-        y: 0.0,
-        z: 0.0,
-    };
-    let origin = Vec3 {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-
+    let list: Vec<Sphere> = vec![
+        Sphere {
+            center: Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: -1.0,
+            },
+            radius: 0.5,
+        },
+        Sphere {
+            center: Vec3 {
+                x: 0.0,
+                y: -100.5,
+                z: -1.0,
+            },
+            radius: 100.0,
+        },
+    ];
+    let world = World { hitables: list };
+    let camera = Camera::new();
+    let mut rng = rand::rng();
     for j in (0..ny).rev() {
         for i in 0..nx {
-            let jfl = j as f64;
-            let ifl = i as f64;
-            let nxf = nx as f64;
-            let nyf = ny as f64;
-            let u = ifl / nxf;
-            let v = jfl / nyf;
-            let direction = lower_left_corner + horizontal*u + vertical*v;
-            let ray = Ray{a: origin, b:direction};
-            let color = color(ray);
-            let ir: u8 = (255.99 * color.x) as u8;
-            let ig: u8 = (255.99 * color.y) as u8;
-            let ib: u8 = (255.99 * color.z) as u8;
+            let mut col = Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
+            for _s in 0..ns {
+                let jfl = j as f64;
+                let ifl = i as f64;
+
+                let randfl: f64 = rng.random();
+                let u = (ifl + randfl) / nxf;
+                let v = (jfl + randfl) / nyf;
+
+                let ray = camera.get_ray(u, v);
+                let _p = ray.point_at_parameter(2.0);
+                col += color(ray, &world);
+            }
+            col /= nsf;
+            let ir: u8 = (255.99 * col.x) as u8;
+            let ig: u8 = (255.99 * col.y) as u8;
+            let ib: u8 = (255.99 * col.z) as u8;
             writeln!(&mut file, "{} {} {}", ir, ig, ib);
         }
     }

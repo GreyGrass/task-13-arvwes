@@ -12,20 +12,21 @@ use std::f64::INFINITY;
 use std::fs::File;
 use std::io::Write;
 
-
-
-fn color(ray: Ray, hitables: &World, depth: usize)  -> Vec3 {
+fn color(ray: Ray, hitables: &World, depth: usize) -> Vec3 {
     let possible_hit = hitables.hit_anything(0.001, INFINITY, &ray);
     if let Some(rec) = possible_hit {
-            let possible_scatter = rec.material.scatter(&ray, &rec);
-            if depth < 50 && let Some(scatter) = possible_scatter{
-                return  scatter.0 * color(scatter.1, &hitables, depth+1);
-                
-            }else{
-                return Vec3 { x: 0.0, y: 0.0, z: 0.0 };
-            }
-
-        
+        let possible_scatter = rec.material.scatter(&ray, &rec);
+        if depth < 50
+            && let Some(scatter) = possible_scatter
+        {
+            return scatter.0 * color(scatter.1, &hitables, depth + 1);
+        } else {
+            return Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
+        }
     } else {
         let u_direction = ray.direction().unit_vector();
         let t: f64 = 0.5 * (u_direction.y + 1.0);
@@ -41,7 +42,6 @@ fn color(ray: Ray, hitables: &World, depth: usize)  -> Vec3 {
         };
         start_value * (1.0 - t) + end_value * t
     }
-    
 }
 
 fn main() -> std::io::Result<()> {
@@ -62,7 +62,13 @@ fn main() -> std::io::Result<()> {
                 z: -1.0,
             },
             radius: 0.5,
-            material: Material::Lambertian { albedo: Vec3 { x: 0.8, y: 0.3, z: 0.3 } }
+            material: Material::Lambertian {
+                albedo: Vec3 {
+                    x: 0.8,
+                    y: 0.3,
+                    z: 0.3,
+                },
+            },
         },
         Sphere {
             center: Vec3 {
@@ -71,7 +77,13 @@ fn main() -> std::io::Result<()> {
                 z: -1.0,
             },
             radius: 100.0,
-             material: Material::Lambertian { albedo: Vec3 { x: 0.8, y: 0.8, z: 0.0 } }
+            material: Material::Lambertian {
+                albedo: Vec3 {
+                    x: 0.8,
+                    y: 0.8,
+                    z: 0.0,
+                },
+            },
         },
         Sphere {
             center: Vec3 {
@@ -80,7 +92,14 @@ fn main() -> std::io::Result<()> {
                 z: -1.0,
             },
             radius: 0.5,
-             material: Material::Metal { albedo: Vec3 { x: 0.8, y: 0.6, z: 0.2 }, fuzz: 0.0 }
+            material: Material::Metal {
+                albedo: Vec3 {
+                    x: 0.8,
+                    y: 0.6,
+                    z: 0.2,
+                },
+                fuzz: 0.0,
+            },
         },
         Sphere {
             center: Vec3 {
@@ -89,7 +108,7 @@ fn main() -> std::io::Result<()> {
                 z: -1.0,
             },
             radius: 0.5,
-             material: Material::Dielectric { ref_idx: 1.5 } 
+            material: Material::Dielectric { ref_idx: 1.5 },
         },
         Sphere {
             center: Vec3 {
@@ -98,12 +117,29 @@ fn main() -> std::io::Result<()> {
                 z: -1.0,
             },
             radius: -0.45,
-             material: Material::Dielectric { ref_idx: 1.5 } 
+            material: Material::Dielectric { ref_idx: 1.5 },
         },
-
     ];
     let world = World { hitables: list };
-    let camera = Camera::new();
+    let camera = Camera::new(
+        Vec3 {
+            x: -2.0,
+            y: 2.0,
+            z: 1.0,
+        },
+        Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: -1.0,
+        },
+        Vec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        },
+        45.0,
+        nxf / nyf,
+    );
     let mut rng = rand::rng();
     for j in (0..ny).rev() {
         for i in 0..nx {
@@ -125,7 +161,11 @@ fn main() -> std::io::Result<()> {
                 col += color(ray, &world, 1);
             }
             col /= nsf;
-            col = Vec3{x: col.x.sqrt(), y: col.y.sqrt(), z: col.z.sqrt()};
+            col = Vec3 {
+                x: col.x.sqrt(),
+                y: col.y.sqrt(),
+                z: col.z.sqrt(),
+            };
             let ir: u8 = (255.99 * col.x) as u8;
             let ig: u8 = (255.99 * col.y) as u8;
             let ib: u8 = (255.99 * col.z) as u8;

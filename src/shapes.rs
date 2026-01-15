@@ -63,7 +63,7 @@ impl Material {
                 let target = rec.p + rec.normal + random_in_unit_sphere();
                 let scattered = Ray {
                     a: rec.p,
-                    b: target,
+                    b: target-rec.p,
                 };
                 let hold = (*albedo, scattered);
                 return Some(hold);
